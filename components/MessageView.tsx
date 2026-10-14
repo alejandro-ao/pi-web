@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useState, useRef, useEffect, useMemo } from "react";
+import { memo, useState, useRef, useEffect, useMemo, useId } from "react";
 import ReactMarkdown from "react-markdown";
 import { MarkdownBody } from "./MarkdownBody";
 import { ImagePreview } from "./ImagePreview";
@@ -1659,72 +1659,66 @@ function CompactionMessageView({ message }: { message: CustomMessage }) {
   const { t } = useI18n();
   // Collapsed by default, as in pi's TUI: a summary can run to pages.
   const [expanded, setExpanded] = useState(false);
+  const [detailsVisible, setDetailsVisible] = useState(false);
+  const toggleRef = useRef<HTMLButtonElement>(null);
+  const summaryId = useId();
+  // Keep the Markdown mounted until the split separator has folded shut.
+  useEffect(() => {
+    if (expanded) return;
+    const timer = setTimeout(() => setDetailsVisible(false), 260);
+    return () => clearTimeout(timer);
+  }, [expanded]);
+  const toggle = () => {
+    if (!expanded) setDetailsVisible(true);
+    setExpanded((value) => !value);
+  };
   const summary = getMessageText(message.content);
-  const time = formatTime(message.timestamp);
   const tokensBefore = (message.details as { tokensBefore?: unknown } | undefined)?.tokensBefore;
 
   return (
-    <div style={{ marginBottom: 16 }}>
-      <div
-        style={{
-          border: "1px solid var(--border)",
-          borderRadius: 8,
-          overflow: "hidden",
-          background: "var(--bg)",
-        }}
+    <div className="compaction-divider" style={{ marginBottom: 16 }}>
+      <button
+        type="button"
+        ref={toggleRef}
+        aria-expanded={expanded}
+        aria-controls={summaryId}
+        title={expanded ? t("i18n.collapse") : t("i18n.expand")}
+        onClick={toggle}
+        className="compaction-divider-toggle"
       >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            padding: "7px 10px",
-            borderBottom: "1px solid var(--border)",
-            background: "var(--bg-panel)",
-            color: "var(--text-muted)",
-          }}
-        >
-          <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: 650 }}>
-            compaction
-          </span>
-          {time && <span style={{ marginLeft: "auto", color: "var(--text-dim)", fontSize: 10 }}>{time}</span>}
-        </div>
-
-        <div style={{ padding: "11px 13px 12px" }}>
-          <button
-            type="button"
-            aria-expanded={expanded}
-            title={expanded ? t("i18n.collapse") : t("i18n.expand")}
-            onClick={() => setExpanded((v) => !v)}
-            style={{
-              display: "flex",
-              alignItems: "flex-start",
-              gap: 8,
-              width: "100%",
-              padding: 0,
-              border: "none",
-              background: "transparent",
-              color: "var(--text)",
-              cursor: "pointer",
-              font: "inherit",
-              textAlign: "left",
-            }}
-          >
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flexShrink: 0, marginTop: 4, color: "var(--text-muted)", transform: expanded ? "rotate(90deg)" : "none", transition: "transform 0.15s" }}>
-              <polyline points="4 2.5 7.5 6 4 9.5" />
-            </svg>
-            <span style={{ minWidth: 0 }}>
-              <span style={{ display: "block", fontSize: "calc(15px + var(--chat-font-size-offset, 0px))", fontWeight: 700, lineHeight: 1.35 }}>
-                {t("i18n.conversationCompacted")}
-              </span>
-              {typeof tokensBefore === "number" && Number.isFinite(tokensBefore) && (
-                <span style={{ display: "block", marginTop: 3, color: "var(--text-muted)", fontSize: "calc(13px + var(--chat-font-size-offset, 0px))", lineHeight: 1.5 }}>
-                  {t("i18n.compactedFromTokens", { tokens: tokensBefore.toLocaleString() })}
-                </span>
-              )}
-            </span>
-          </button>
-          {expanded && <CompactionSummaryDetails summary={summary} />}
+        <span aria-hidden="true" className="compaction-divider-rule" />
+        <span className="compaction-divider-label">{t("chat.compacted")}</span>
+        <span aria-hidden="true" className="compaction-divider-rule" />
+      </button>
+      <div id={summaryId} className="compaction-split" data-expanded={expanded} aria-hidden={!expanded} inert={!expanded}>
+        <div className="compaction-split-inner">
+          {detailsVisible && (
+            <>
+              <div className="compaction-split-content">
+                {typeof tokensBefore === "number" && Number.isFinite(tokensBefore) && (
+                  <div style={{ color: "var(--text-muted)", fontSize: 12 }}>
+                    {t("i18n.compactedFromTokens", { tokens: tokensBefore.toLocaleString() })}
+                  </div>
+                )}
+                <CompactionSummaryDetails summary={summary} />
+              </div>
+              <button
+                type="button"
+                aria-expanded={expanded}
+                aria-controls={summaryId}
+                title={t("i18n.collapse")}
+                onClick={() => {
+                  setExpanded(false);
+                  toggleRef.current?.focus();
+                }}
+                className="compaction-divider-toggle"
+              >
+                <span aria-hidden="true" className="compaction-divider-rule" />
+                <span className="compaction-divider-label">{t("chat.compactionSummaryEnd")}</span>
+                <span aria-hidden="true" className="compaction-divider-rule" />
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>

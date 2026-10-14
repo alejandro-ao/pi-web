@@ -723,7 +723,7 @@ test("keeps the registered name where no result names the server and tool", (t) 
   assert.match(textOf(html), /mcp__docs_v2__search_pages\{\}/);
 });
 
-test("collapses the compaction summary to its title and token count, as pi's TUI does (#1026)", () => {
+test("shows compaction as a one-line divider with summary details hidden until expanded", () => {
   const summary = "## Goal\n\nShip the parser fix.\n\n<read-files>\nlib/read.ts\n</read-files>\n\n<modified-files>\nlib/changed.ts\n</modified-files>";
   const message = {
     role: "custom",
@@ -734,9 +734,13 @@ test("collapses the compaction summary to its title and token count, as pi's TUI
   };
   const html = renderMessage(message);
 
-  assert.match(html, /<button type="button" aria-expanded="false" title="Expand"/);
-  assert.match(html, /Conversation compacted/);
-  assert.ok(html.includes(`Compacted from ${(123456).toLocaleString()} tokens`));
+  assert.match(html, /<button type="button" aria-expanded="false" aria-controls="[^"]+" title="Expand"/);
+  assert.match(html, /class="compaction-split" data-expanded="false" aria-hidden="true" inert=""/);
+  assert.match(html, /class="compaction-divider"/);
+  assert.match(html, />Compacted<\/span>/);
+  assert.match(html, /class="compaction-divider-toggle"/);
+  assert.equal((html.match(/class="compaction-divider-rule"/g) ?? []).length, 2);
+  assert.doesNotMatch(html, /Conversation compacted|Compacted from|<svg|bg-panel/);
   assert.doesNotMatch(html, /Ship the parser fix|following summary|File context|lib\/read\.ts|lib\/changed\.ts/);
   assert.doesNotMatch(renderMessage({ ...message, details: undefined }), /Compacted from/);
 
