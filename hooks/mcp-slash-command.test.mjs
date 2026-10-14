@@ -78,6 +78,41 @@ function hook({ commands = [], pending = null, getCommands = async () => ({ comm
   return { run: scope.handleBuiltinSlashCommand, scope, calls };
 }
 
+test("/settings opens the remembered section without starting a session", async () => {
+  const { run, scope, calls } = hook();
+  scope.session = null;
+  scope.newSessionCwd = "/project";
+  scope.getLastSettingsSection = (cwd) => {
+    assert.equal(cwd, "/project");
+    return "models";
+  };
+  scope.ensureNewSession = () => { assert.fail("must not start a session"); };
+  assert.deepEqual(await run("/settings"), { handled: true, action: "openSettings" });
+  assert.deepEqual(calls.opened, ["models"]);
+  assert.deepEqual(calls.requests, []);
+  assert.deepEqual(calls.notices, []);
+  scope.session = { cwd: "/saved-project" };
+  scope.getLastSettingsSection = (cwd) => {
+    assert.equal(cwd, "/saved-project");
+    return "general";
+  };
+  await run("/settings");
+  assert.deepEqual(calls.opened, ["models", "general"]);
+});
+
+test("/settings refuses arguments and does not open the panel", async () => {
+  const { run, calls } = hook();
+  assert.deepEqual(await run("/settings models"), { handled: true, error: "Usage: /settings" });
+  assert.deepEqual(calls.opened, []);
+  assert.deepEqual(calls.requests, []);
+  assert.equal(calls.notices[0].type, "error");
+});
+
+test("/settings without a settings opener is not handled", async () => {
+  const { run } = hook({ openSettings: false });
+  assert.deepEqual(await run("/settings"), { handled: false });
+});
+
 test("/thinking opens the picker without creating a session", async () => {
   const { run, scope, calls } = hook();
   scope.ensureNewSession = () => { assert.fail("must not create a session"); };

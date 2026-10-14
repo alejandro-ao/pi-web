@@ -263,6 +263,12 @@ test("cycleListIndex wraps in both directions", () => {
   assert.equal(cycleListIndex(-1, 4, 1), 0);
 });
 
+test("settings is available while streaming and submits directly on Enter", () => {
+  assert.equal(canRunBuiltinSlashCommandWhileStreaming("/settings"), true);
+  assert.equal(canRunBuiltinSlashCommandWhileStreaming("/settings-extra"), false);
+  assert.equal(submitsSlashCommandOnEnter("/settings", { name: "settings", source: "builtin", availableWhileStreaming: true }, true), true);
+});
+
 test("thinking commands run locally while streaming", () => {
   assert.equal(canRunBuiltinSlashCommandWhileStreaming("/thinking"), true);
   assert.equal(canRunBuiltinSlashCommandWhileStreaming("/thinking high"), true);

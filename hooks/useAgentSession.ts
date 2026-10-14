@@ -33,7 +33,7 @@ import { getToolExecutionProgress } from "@/lib/tool-execution-progress";
 import { CODEMODE_TOOL_NAME, getCodemodeProgress } from "@/lib/codemode-view";
 import { updateExtensionWidgets } from "@/lib/extension-widgets";
 import { bareMcpOpensSettings } from "@/lib/mcp-command";
-import type { SettingsSection } from "@/lib/settings-navigation";
+import { getLastSettingsSection, type SettingsSection } from "@/lib/settings-navigation";
 import {
   enqueueExtensionUiRequest,
   removeExtensionUiRequest,
@@ -2167,6 +2167,16 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
 
     const [, commandName, rawArgs = ""] = match;
     const args = rawArgs.trim();
+    if (commandName === "settings") {
+      if (args) {
+        const error = "Usage: /settings";
+        addNotice({ type: "error", message: error });
+        return { handled: true, error };
+      }
+      if (!onOpenSettings) return { handled: false };
+      onOpenSettings(getLastSettingsSection(session?.cwd ?? newSessionCwd));
+      return { handled: true, action: "openSettings" };
+    }
     if (commandName === "thinking") {
       if (!args) return { handled: true, action: "openThinkingPicker" };
       const level = args === "auto" ? "auto" : asConcreteThinkingLevel(args);
@@ -2325,7 +2335,7 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
     } finally {
       if (commandName === "compact") setIsCompacting(false);
     }
-  }, [activeLeafId, addNotice, ensureNewSession, isCompacting, loadModels, loadSession, loadSlashCommands, loadTools, promoteNewSession, onOpenSettings, onSessionForked, onSessionStatsPanelOpen, onNewSession, modelList, handleModelChange, displayModel, modelThinkingLevels, handleThinkingLevelChange, slashCommandsForMcp]);
+  }, [activeLeafId, addNotice, ensureNewSession, isCompacting, loadModels, loadSession, loadSlashCommands, loadTools, promoteNewSession, onOpenSettings, onSessionForked, onSessionStatsPanelOpen, onNewSession, modelList, handleModelChange, displayModel, modelThinkingLevels, handleThinkingLevelChange, session, newSessionCwd, slashCommandsForMcp]);
 
   // Let AgentSession.prompt decide atomically whether to queue against the
   // current run or start a new turn if it settled while the request was in
