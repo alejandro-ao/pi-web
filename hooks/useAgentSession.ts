@@ -163,7 +163,7 @@ export interface SlashCommandInfo {
 
 export type BuiltinSlashCommandResult =
   | { handled: false }
-  | { handled: true; message?: string; error?: string; action?: "openSessionStats" | "openSettings" | "openModelPicker" };
+  | { handled: true; message?: string; error?: string; action?: "openSessionStats" | "openSettings" | "openModelPicker" | "openThinkingPicker" };
 
 /** How a run ended, for the completion sound and notifications. */
 export interface AgentEndInfo {
@@ -2133,6 +2133,33 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
     reloadModelsQuietly();
   }, [addNotice, displayModel, handleModelChange, reloadModelsQuietly, saveDefaultPreferences]);
 
+  const handleThinkingLevelChange = useCallback(async (level: ThinkingLevelOption) => {
+    if (level === "auto") {
+      thinkingLevelOverrideRef.current = null;
+      setNewSessionThinkingLevel(null);
+      setCurrentThinkingOverride(null);
+      return;
+    }
+    if (isNew) {
+      thinkingLevelOverrideRef.current = level;
+      setNewSessionThinkingLevel(level);
+    } else {
+      setCurrentThinkingOverride(level);
+    }
+    const sid = sessionIdRef.current ?? await ensuringNewSessionRef.current;
+    if (!sid) return;
+    try {
+      await sendAgentCommand(sid, { type: "set_thinking_level", level });
+      if (sessionHookMountedRef.current && sessionIdRef.current === sid) {
+        setLiveThinkingLevel(level);
+        setCurrentThinkingOverride(null);
+      }
+    } catch (e) {
+      console.error("Failed to set thinking level:", e);
+      setCurrentThinkingOverride(null);
+    }
+  }, [isNew]);
+
   const handleBuiltinSlashCommand = useCallback(async (text: string): Promise<BuiltinSlashCommandResult> => {
     if (!text.startsWith("/")) return { handled: false };
     const match = text.match(/^\/([^\s]+)(?:\s+([\s\S]*))?$/);
@@ -2140,6 +2167,18 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
 
     const [, commandName, rawArgs = ""] = match;
     const args = rawArgs.trim();
+    if (commandName === "thinking") {
+      if (!args) return { handled: true, action: "openThinkingPicker" };
+      const level = args === "auto" ? "auto" : asConcreteThinkingLevel(args);
+      const supported = displayModel ? modelThinkingLevels[`${displayModel.provider}:${displayModel.modelId}`] : null;
+      if (!level || (level !== "auto" && supported && !supported.includes(level))) {
+        const error = `Unsupported thinking level: ${args}. Use /thinking to choose an available level.`;
+        addNotice({ type: "error", message: error });
+        return { handled: true, error };
+      }
+      await handleThinkingLevelChange(level);
+      return { handled: true };
+    }
     if (commandName === "model") {
       if (!args) return { handled: true, action: "openModelPicker" };
       const selected = modelList.find((model) => `${model.provider}/${model.id}` === args);
@@ -2286,7 +2325,7 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
     } finally {
       if (commandName === "compact") setIsCompacting(false);
     }
-  }, [activeLeafId, addNotice, ensureNewSession, isCompacting, loadModels, loadSession, loadSlashCommands, loadTools, promoteNewSession, onOpenSettings, onSessionForked, onSessionStatsPanelOpen, onNewSession, modelList, handleModelChange, slashCommandsForMcp]);
+  }, [activeLeafId, addNotice, ensureNewSession, isCompacting, loadModels, loadSession, loadSlashCommands, loadTools, promoteNewSession, onOpenSettings, onSessionForked, onSessionStatsPanelOpen, onNewSession, modelList, handleModelChange, displayModel, modelThinkingLevels, handleThinkingLevelChange, slashCommandsForMcp]);
 
   // Let AgentSession.prompt decide atomically whether to queue against the
   // current run or start a new turn if it settled while the request was in
@@ -2372,33 +2411,6 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
       addNotice({ type: "error", message: "Failed to recall queued messages" });
     }
   }, [opts.chatInputRef, addNotice]);
-
-  const handleThinkingLevelChange = useCallback(async (level: ThinkingLevelOption) => {
-    if (level === "auto") {
-      thinkingLevelOverrideRef.current = null;
-      setNewSessionThinkingLevel(null);
-      setCurrentThinkingOverride(null);
-      return;
-    }
-    if (isNew) {
-      thinkingLevelOverrideRef.current = level;
-      setNewSessionThinkingLevel(level);
-    } else {
-      setCurrentThinkingOverride(level);
-    }
-    const sid = sessionIdRef.current ?? await ensuringNewSessionRef.current;
-    if (!sid) return;
-    try {
-      await sendAgentCommand(sid, { type: "set_thinking_level", level });
-      if (sessionHookMountedRef.current && sessionIdRef.current === sid) {
-        setLiveThinkingLevel(level);
-        setCurrentThinkingOverride(null);
-      }
-    } catch (e) {
-      console.error("Failed to set thinking level:", e);
-      setCurrentThinkingOverride(null);
-    }
-  }, [isNew]);
 
   const handleSetDefaultThinkingLevel = useCallback(async (level: ConcreteThinkingLevel) => {
     try {

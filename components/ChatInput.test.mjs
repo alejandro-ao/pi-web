@@ -263,6 +263,13 @@ test("cycleListIndex wraps in both directions", () => {
   assert.equal(cycleListIndex(-1, 4, 1), 0);
 });
 
+test("thinking commands run locally while streaming", () => {
+  assert.equal(canRunBuiltinSlashCommandWhileStreaming("/thinking"), true);
+  assert.equal(canRunBuiltinSlashCommandWhileStreaming("/thinking high"), true);
+  assert.equal(canRunBuiltinSlashCommandWhileStreaming("/thinking-extra"), false);
+  assert.equal(submitsSlashCommandOnEnter("/thinking", { name: "thinking", source: "builtin", availableWhileStreaming: true }, true), true);
+});
+
 test("composer autofocus is opt-in", () => {
   const render = (autoFocus) => renderToStaticMarkup(
     React.createElement(I18nProvider, null, React.createElement(ChatInput, {

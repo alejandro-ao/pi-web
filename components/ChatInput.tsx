@@ -287,6 +287,7 @@ type SlashCommandSource = SlashCommandPaletteItem["source"];
 const BUILTIN_SLASH_COMMANDS: BuiltinSlashCommand[] = [
   { name: "new", description: "chat.commandNew", source: "builtin" },
   { name: "model", description: "chat.commandModel", source: "builtin" },
+  { name: "thinking", description: "chat.commandThinking", source: "builtin", availableWhileStreaming: true },
   { name: "compact", description: "chat.commandCompact", source: "builtin" },
   { name: "auto-compact", description: "chat.commandAutoCompact", source: "builtin" },
   { name: "reload", description: "chat.commandReload", source: "builtin" },
@@ -710,6 +711,22 @@ export const ChatInput = memo(forwardRef<ChatInputHandle, Props>(function ChatIn
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const toolDropdownRef = useRef<HTMLDivElement>(null);
   const thinkingDropdownRef = useRef<HTMLDivElement>(null);
+  const thinkingTriggerRef = useRef<HTMLButtonElement>(null);
+  const thinkingReturnToComposerRef = useRef(false);
+  const closeThinkingPicker = useCallback(() => {
+    setThinkingDropdownOpen(false);
+    if (thinkingReturnToComposerRef.current) {
+      setControlsMenuOpen(false);
+      textareaRef.current?.focus();
+    } else thinkingTriggerRef.current?.focus();
+    thinkingReturnToComposerRef.current = false;
+  }, []);
+  useEffect(() => {
+    if (!thinkingDropdownOpen || builtinCommandPending) return;
+    const root = thinkingDropdownRef.current;
+    const selected = root?.querySelector<HTMLButtonElement>('button[role="option"][aria-selected="true"]');
+    (selected ?? root?.querySelector<HTMLButtonElement>('button[role="option"]'))?.focus();
+  }, [thinkingDropdownOpen, builtinCommandPending]);
   const controlsMenuRef = useRef<HTMLDivElement>(null);
   const historyMenuRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -1060,6 +1077,12 @@ export const ChatInput = memo(forwardRef<ChatInputHandle, Props>(function ChatIn
       const result = await onBuiltinCommand(msg);
       if (!result.handled) return false;
       if (!result.error && canClearBuiltinCommandInput(valueRef.current, attachedImagesRef.current.length, msg)) clearInput();
+      if (result.action === "openThinkingPicker") {
+        setSlashMenuOpen(false);
+        thinkingReturnToComposerRef.current = true;
+        setControlsMenuOpen(true);
+        setThinkingDropdownOpen(true);
+      }
       if (result.action === "openModelPicker") {
         setSlashMenuOpen(false);
         modelSelectorRef.current?.open(() => textareaRef.current?.focus());
@@ -2540,9 +2563,34 @@ export const ChatInput = memo(forwardRef<ChatInputHandle, Props>(function ChatIn
               } : null),
             }}>
             {onThinkingLevelChange && (
-              <div ref={thinkingDropdownRef} style={{ position: "relative" }}>
+              <div ref={thinkingDropdownRef} style={{ position: "relative" }}
+                onKeyDown={(event) => {
+                  if (!thinkingDropdownOpen || event.nativeEvent.isComposing) return;
+                  if (event.key === "Escape") {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    closeThinkingPicker();
+                    return;
+                  }
+                  if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
+                  event.preventDefault();
+                  event.stopPropagation();
+                  const rows = Array.from(thinkingDropdownRef.current?.querySelectorAll<HTMLButtonElement>('button[role="option"]') ?? []);
+                  if (!rows.length) return;
+                  const current = rows.indexOf(document.activeElement as HTMLButtonElement);
+                  const next = current < 0 ? (event.key === "ArrowDown" ? 0 : rows.length - 1)
+                    : (current + (event.key === "ArrowDown" ? 1 : -1) + rows.length) % rows.length;
+                  rows[next].focus();
+                  rows[next].scrollIntoView({ block: "nearest" });
+                }}>
                 <button
-                  onClick={() => setThinkingDropdownOpen((v) => !v)}
+                  ref={thinkingTriggerRef}
+                  aria-haspopup="listbox"
+                  aria-expanded={thinkingDropdownOpen}
+                  onClick={() => {
+                    thinkingReturnToComposerRef.current = false;
+                    setThinkingDropdownOpen((v) => !v);
+                  }}
                   title={isStreaming
                     ? t("chat.currentReasoning", { level: thinkingDisplayLabel })
                     : t("chat.changeReasoning", { level: thinkingDisplayLabel })}
@@ -2577,7 +2625,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandle, Props>(function ChatIn
                   {(!isMobile || controlsMenuOpen) && <span style={{ whiteSpace: "nowrap" }}>{thinkingDisplayLabel}</span>}
                 </button>
                 {thinkingDropdownOpen && (
-                  <div style={{
+                  <div role="listbox" aria-label={t("chat.changeReasoningLabel")} style={{
                     position: "absolute", bottom: "calc(100% + 6px)",
                     ...(isMobile ? { left: 0 } : { right: 0 }),
                     zIndex: 100, background: "var(--bg)", border: "1px solid var(--border)",
@@ -2601,7 +2649,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandle, Props>(function ChatIn
                           key={lvl}
                           active={isActive}
                           onSelect={() => {
-                            setThinkingDropdownOpen(false);
+                            closeThinkingPicker();
                             if (lvl === "auto") {
                               if (!isAutoThinkingSelection) onThinkingLevelChange("auto");
                               return;
@@ -2615,7 +2663,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandle, Props>(function ChatIn
                                 saveLabel: t("chat.saveDefaultThinking"),
                                 defaultLabel: t("chat.defaultThinking"),
                                 onSave: () => {
-                                  setThinkingDropdownOpen(false);
+                                  closeThinkingPicker();
                                   onSetDefaultThinkingLevel(lvl);
                                 },
                               }

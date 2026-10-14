@@ -78,6 +78,34 @@ function hook({ commands = [], pending = null, getCommands = async () => ({ comm
   return { run: scope.handleBuiltinSlashCommand, scope, calls };
 }
 
+test("/thinking opens the picker without creating a session", async () => {
+  const { run, scope, calls } = hook();
+  scope.ensureNewSession = () => { assert.fail("must not create a session"); };
+  assert.deepEqual(await run("/thinking"), { handled: true, action: "openThinkingPicker" });
+  assert.deepEqual(calls.requests, []);
+});
+
+test("/thinking validates levels for the selected model and accepts auto", async () => {
+  const { run, scope, calls } = hook();
+  scope.asConcreteThinkingLevel = (level) => ["off", "minimal", "low", "medium", "high", "xhigh", "max"].includes(level) ? level : null;
+  scope.displayModel = { provider: "test", modelId: "reasoner" };
+  scope.modelThinkingLevels = { "test:reasoner": ["off", "low", "high"] };
+  const selected = [];
+  scope.handleThinkingLevelChange = async (level) => selected.push(level);
+  scope.ensureNewSession = () => { assert.fail("must not create a session"); };
+  for (const level of ["high", "off", "auto"]) {
+    assert.deepEqual(await run(`/thinking ${level}`), { handled: true });
+  }
+  for (const level of ["max", "xhigh", "invalid", "high extra"]) {
+    assert.match((await run(`/thinking ${level}`)).error, /Unsupported thinking level/);
+  }
+  assert.deepEqual(selected, ["high", "off", "auto"]);
+  assert.equal(calls.notices.length, 4);
+  scope.modelThinkingLevels = { "test:reasoner": ["off"] };
+  assert.match((await run("/thinking high")).error, /Unsupported/);
+  assert.deepEqual(await run("/thinking off"), { handled: true });
+});
+
 test("/model opens the picker without creating a backend session", async () => {
   const { run, scope, calls } = hook();
   scope.ensureNewSession = () => { assert.fail("must not create a session"); };

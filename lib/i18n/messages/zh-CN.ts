@@ -591,6 +591,7 @@ export const zhCNLocale: LocalePlugin = {
     "chat.prompts": "提示词",
     "chat.skills": "技能",
     "chat.dormant": "休眠",
+    "chat.commandThinking": "选择推理级别，或直接设置",
     "chat.commandModel": "选择模型，或使用 provider/model 切换",
     "chat.commandNew": "开始新会话",
     "chat.commandCompact": "压缩上下文，可选附加说明",
