@@ -2126,6 +2126,19 @@ span.token.table {
   display: inline;
 }
 
+.sticky-user-preview {
+  animation: sticky-user-preview-in 280ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes sticky-user-preview-in {
+  from { opacity: 0; transform: translateY(-12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sticky-user-preview { animation: none; }
+}
+
 @keyframes drop-zone-in {
   from { opacity: 0; transform: scale(0.97); }
   to   { opacity: 1; transform: scale(1); }

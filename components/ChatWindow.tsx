@@ -14,6 +14,7 @@ import { getFinalAnswerViews, keepWrittenFiles, type FinalAnswerViews } from "@/
 import { buildQuotedSelection } from "@/lib/quoted-selection";
 import { dropMentionText, splitDroppedItems, uploadFiles, type DroppedItem } from "@/lib/file-upload-client";
 import { MessageView } from "./MessageView";
+import { StickyUserMessage } from "./StickyUserMessage";
 import { MarkdownBody } from "./MarkdownBody";
 import { ChatInput, type ChatInputHandle } from "./ChatInput";
 import { ChatMinimap, useMessageRefs } from "./ChatMinimap";
@@ -1070,6 +1071,7 @@ export function ChatWindow({ session, searchTarget, onSearchTargetHandled, initi
           <ExtensionCustomPanel key={extensionCustomUi.id} request={extensionCustomUi} waitingCount={waitingExtensionCustomUiCount} onInput={sendExtensionCustomInput} />
         )}
         {!isEmptyNew && <>
+        {!loading && !pendingScrollRestore && <StickyUserMessage key={session?.id ?? "new"} scrollContainer={scrollContainerRef} content={messageContentRef} sessionKey={session?.id ?? "new"} />}
         <div
           ref={scrollContainerRef}
           // The message list is the one place long output has to be dragged through,
@@ -1155,7 +1157,7 @@ export function ChatWindow({ session, searchTarget, onSearchTargetHandled, initi
                 );
                 if (!isVisible || currentRefIdx === undefined) return view;
                 return (
-                  <div key={`${keyPrefix}-${messageKey}`} data-entry-id={entryIds[idx]} ref={options.attachRef === false ? undefined : attachVisibleRef(idx, currentRefIdx)}>
+                  <div key={`${keyPrefix}-${messageKey}`} data-entry-id={entryIds[idx]} data-user-preview={msg.role === "user" ? (typeof msg.content === "string" ? msg.content : msg.content.filter(block => block.type === "text").map(block => block.text).join("\n")) : undefined} ref={options.attachRef === false ? undefined : attachVisibleRef(idx, currentRefIdx)}>
                     {view}
                   </div>
                 );
