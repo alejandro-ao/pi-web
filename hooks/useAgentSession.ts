@@ -163,7 +163,7 @@ export interface SlashCommandInfo {
 
 export type BuiltinSlashCommandResult =
   | { handled: false }
-  | { handled: true; message?: string; error?: string; action?: "openSessionStats" | "openSettings" };
+  | { handled: true; message?: string; error?: string; action?: "openSessionStats" | "openSettings" | "openModelPicker" };
 
 /** How a run ended, for the completion sound and notifications. */
 export interface AgentEndInfo {
@@ -2140,6 +2140,17 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
 
     const [, commandName, rawArgs = ""] = match;
     const args = rawArgs.trim();
+    if (commandName === "model") {
+      if (!args) return { handled: true, action: "openModelPicker" };
+      const selected = modelList.find((model) => `${model.provider}/${model.id}` === args);
+      if (!selected) {
+        const error = `Model not available: ${args}. Use /model to choose an available model.`;
+        addNotice({ type: "error", message: error });
+        return { handled: true, error };
+      }
+      await handleModelChange(selected.provider, selected.id);
+      return { handled: true };
+    }
     // Navigation must not start an AgentSession for the composer being left.
     if (commandName === "new") {
       if (args) {
@@ -2275,7 +2286,7 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
     } finally {
       if (commandName === "compact") setIsCompacting(false);
     }
-  }, [activeLeafId, addNotice, ensureNewSession, isCompacting, loadModels, loadSession, loadSlashCommands, loadTools, promoteNewSession, onOpenSettings, onSessionForked, onSessionStatsPanelOpen, onNewSession, slashCommandsForMcp]);
+  }, [activeLeafId, addNotice, ensureNewSession, isCompacting, loadModels, loadSession, loadSlashCommands, loadTools, promoteNewSession, onOpenSettings, onSessionForked, onSessionStatsPanelOpen, onNewSession, modelList, handleModelChange, slashCommandsForMcp]);
 
   // Let AgentSession.prompt decide atomically whether to queue against the
   // current run or start a new turn if it settled while the request was in

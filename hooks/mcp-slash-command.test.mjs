@@ -78,6 +78,28 @@ function hook({ commands = [], pending = null, getCommands = async () => ({ comm
   return { run: scope.handleBuiltinSlashCommand, scope, calls };
 }
 
+test("/model opens the picker without creating a backend session", async () => {
+  const { run, scope, calls } = hook();
+  scope.ensureNewSession = () => { assert.fail("must not create a session"); };
+  assert.deepEqual(await run("/model"), { handled: true, action: "openModelPicker" });
+  assert.deepEqual(calls.requests, []);
+  assert.deepEqual(calls.notices, []);
+});
+
+test("/model provider/model selects an available model, including nested ids", async () => {
+  const { run, scope } = hook();
+  scope.modelList = [{ provider: "gateway", id: "org/model" }];
+  const selected = [];
+  scope.handleModelChange = async (...args) => selected.push(args);
+  scope.ensureNewSession = () => { assert.fail("must not create a session"); };
+  assert.deepEqual(await run("/model gateway/org/model"), { handled: true });
+  assert.deepEqual(selected, [["gateway", "org/model"]]);
+  const result = await run("/model missing/model");
+  assert.equal(result.handled, true);
+  assert.match(result.error, /Model not available/);
+  assert.equal(selected.length, 1);
+});
+
 test("/new navigates without starting or prompting a backend session", async () => {
   const { run, scope, calls } = hook();
   let opened = 0;

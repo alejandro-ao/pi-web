@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { forwardRef, useImperativeHandle, useEffect, useRef, useState, type CSSProperties } from "react";
 import { useI18n } from "@/hooks/useI18n";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { SelectorRow } from "./SelectorRow";
@@ -30,7 +30,9 @@ interface ModelSelectorProps {
   onSetDefault?: (provider: string, modelId: string) => void;
 }
 
-const MODEL_FILTER_THRESHOLD = 8;
+export interface ModelSelectorHandle {
+  open: (returnFocus?: () => void) => void;
+}
 
 export function filterModelOptions(options: ModelSelectorOption[], query: string): ModelSelectorOption[] {
   const normalizedQuery = query.trim().toLocaleLowerCase();
@@ -43,7 +45,7 @@ export function filterModelOptions(options: ModelSelectorOption[], query: string
   ));
 }
 
-export function ModelSelector({
+export const ModelSelector = forwardRef<ModelSelectorHandle, ModelSelectorProps>(function ModelSelector({
   options,
   value,
   onChange,
@@ -58,11 +60,15 @@ export function ModelSelector({
   placement = "up",
   defaultValue,
   onSetDefault,
-}: ModelSelectorProps) {
+}: ModelSelectorProps, ref) {
   const { t } = useI18n();
   const isMobile = useIsMobile();
   const rootRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const filterRef = useRef<HTMLInputElement>(null);
+  const returnFocusRef = useRef<(() => void) | undefined>(undefined);
+  const keyboardOpenRef = useRef(false);
   const [open, setOpen] = useState(false);
   const [anchorRect, setAnchorRect] = useState<{ top: number; right: number; bottom: number; left: number; width: number } | null>(null);
   const [filter, setFilter] = useState("");
@@ -70,7 +76,7 @@ export function ModelSelector({
   // Options arrive in pi's /model order (orderSelectorModels()); never re-sort
   // them, or a models.json provider loses the order its file gives (#783).
   const filteredOptions = filterModelOptions(options, filter);
-  const showFilter = options.length > MODEL_FILTER_THRESHOLD;
+  const showFilter = true;
   const modelsByProvider: { provider: string; options: ModelSelectorOption[] }[] = [];
 
   for (const option of filteredOptions) {
@@ -102,6 +108,32 @@ export function ModelSelector({
     setOpen(false);
     setFilter("");
   }, [locked]);
+
+  const close = () => {
+    setOpen(false);
+    setFilter("");
+    if (returnFocusRef.current) returnFocusRef.current();
+    else triggerRef.current?.focus();
+    returnFocusRef.current = undefined;
+  };
+
+  useImperativeHandle(ref, () => ({
+    open(returnFocus) {
+      if (locked || !triggerRef.current) return;
+      returnFocusRef.current = returnFocus;
+      keyboardOpenRef.current = true;
+      const rect = triggerRef.current.getBoundingClientRect();
+      setAnchorRect({ top: rect.top, right: rect.right, bottom: rect.bottom, left: rect.left, width: rect.width });
+      setFilter("");
+      setOpen(true);
+    },
+  }), [locked]);
+
+  useEffect(() => {
+    if (!open) return;
+    if (!isMobile || keyboardOpenRef.current) filterRef.current?.focus();
+    keyboardOpenRef.current = false;
+  }, [open, isMobile]);
 
   const buttonStyle: CSSProperties = variant === "field"
     ? {
@@ -143,14 +175,12 @@ export function ModelSelector({
 
   const choose = (option: ModelSelectorOption) => {
     const active = option.modelId === value?.modelId && option.provider === value?.provider;
-    setOpen(false);
-    setFilter("");
+    close();
     if (!active || isAutoSelection) onChange(option.provider, option.modelId);
   };
 
   const saveDefault = (option: ModelSelectorOption) => {
-    setOpen(false);
-    setFilter("");
+    close();
     onSetDefault?.(option.provider, option.modelId);
   };
 
@@ -160,14 +190,38 @@ export function ModelSelector({
       className={`model-selector is-${variant}${locked ? " is-disabled" : ""}`}
       style={{ position: "relative", width: variant === "field" || isMobile ? "100%" : undefined, minWidth: 0, flex: variant === "toolbar" && isMobile ? "1 1 auto" : undefined }}
       onKeyDown={(event) => {
-        if (event.key !== "Escape" || !open) return;
-        event.preventDefault();
-        event.stopPropagation();
-        setFilter("");
-        setOpen(false);
+        if (!open || event.nativeEvent.isComposing) return;
+        if (event.key === "Escape") {
+          event.preventDefault();
+          event.stopPropagation();
+          close();
+          return;
+        }
+        const rows = Array.from(panelRef.current?.querySelectorAll<HTMLButtonElement>('button[role="option"]') ?? []);
+        if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+          event.preventDefault();
+          event.stopPropagation();
+          if (!rows.length) return;
+          const current = rows.indexOf(document.activeElement as HTMLButtonElement);
+          const next = current < 0 ? (event.key === "ArrowDown" ? 0 : rows.length - 1)
+            : (current + (event.key === "ArrowDown" ? 1 : -1) + rows.length) % rows.length;
+          rows[next].focus();
+          rows[next].scrollIntoView({ block: "nearest" });
+        } else if (event.key === "Enter" && event.target === filterRef.current) {
+          event.preventDefault();
+          event.stopPropagation();
+          rows[0]?.click();
+        } else if (event.target !== filterRef.current && event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey) {
+          // Typing after arrow navigation returns to filtering.
+          if (event.key === " ") return;
+          event.preventDefault();
+          setFilter((current) => current + event.key);
+          filterRef.current?.focus();
+        }
       }}
     >
       <button
+        ref={triggerRef}
         type="button"
         aria-label={ariaLabel}
         aria-haspopup="listbox"
@@ -177,6 +231,7 @@ export function ModelSelector({
         title={busy ? "Switching model" : locked ? currentName : options.length > 0 || onClear ? "Change model" : "No available models"}
         style={buttonStyle}
         onClick={(event) => {
+          returnFocusRef.current = undefined;
           const rect = event.currentTarget.getBoundingClientRect();
           setAnchorRect({ top: rect.top, right: rect.right, bottom: rect.bottom, left: rect.left, width: rect.width });
           setOpen((current) => {
@@ -258,6 +313,7 @@ export function ModelSelector({
             {showFilter && (
               <div style={{ flexShrink: 0, padding: "6px 8px", borderBottom: "1px solid var(--border)" }}>
                 <input
+                  ref={filterRef}
                   value={filter}
                   onChange={(event) => setFilter(event.target.value)}
                   placeholder={t("chat.filterModels")}
@@ -287,8 +343,7 @@ export function ModelSelector({
             <div style={{ minHeight: 0, overflowY: "auto" }}>
               {onClear && !filter.trim() && (
                 <SelectorRow active={!value} gutter={Boolean(onSetDefault)} onSelect={() => {
-                  setOpen(false);
-                  setFilter("");
+                  close();
                   onClear();
                 }}>
                   <OptionLabel label={emptyLabel ?? "Default"} />
@@ -330,7 +385,7 @@ export function ModelSelector({
       })()}
     </div>
   );
-}
+});
 
 function OptionLabel({ label }: { label: string }) {
   return <span title={label} style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>{label}</span>;

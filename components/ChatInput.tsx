@@ -34,7 +34,7 @@ import { useChatAppearance } from "@/hooks/useChatAppearance";
 import { useFontPreferences } from "@/hooks/useFontPreferences";
 import type { ToolPreset } from "@/lib/tool-presets";
 import { SelectorRow } from "./SelectorRow";
-import { ModelSelector, type ModelSelectorOption } from "./ModelSelector";
+import { ModelSelector, type ModelSelectorOption, type ModelSelectorHandle } from "./ModelSelector";
 
 export { filterModelOptions } from "./ModelSelector";
 
@@ -286,6 +286,7 @@ type SlashCommandSource = SlashCommandPaletteItem["source"];
 
 const BUILTIN_SLASH_COMMANDS: BuiltinSlashCommand[] = [
   { name: "new", description: "chat.commandNew", source: "builtin" },
+  { name: "model", description: "chat.commandModel", source: "builtin" },
   { name: "compact", description: "chat.commandCompact", source: "builtin" },
   { name: "auto-compact", description: "chat.commandAutoCompact", source: "builtin" },
   { name: "reload", description: "chat.commandReload", source: "builtin" },
@@ -682,6 +683,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandle, Props>(function ChatIn
   const trimmedValue = value.trimStart();
   const bashMode = attachedImages.length === 0 && trimmedValue.startsWith("!");
   const bashExcluded = bashMode && trimmedValue.startsWith("!!");
+  const modelSelectorRef = useRef<ModelSelectorHandle>(null);
   const [slashMenuOpen, setSlashMenuOpen] = useState(false);
   const [slashActiveIndex, setSlashActiveIndex] = useState(0);
   const [slashMenuMaxHeight, setSlashMenuMaxHeight] = useState<number | null>(null);
@@ -1058,6 +1060,10 @@ export const ChatInput = memo(forwardRef<ChatInputHandle, Props>(function ChatIn
       const result = await onBuiltinCommand(msg);
       if (!result.handled) return false;
       if (!result.error && canClearBuiltinCommandInput(valueRef.current, attachedImagesRef.current.length, msg)) clearInput();
+      if (result.action === "openModelPicker") {
+        setSlashMenuOpen(false);
+        modelSelectorRef.current?.open(() => textareaRef.current?.focus());
+      }
       return true;
     } finally {
       builtinCommandPendingRef.current = false;
@@ -2444,6 +2450,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandle, Props>(function ChatIn
             {/* Model selector - visible always, disabled while the session or switch is busy */}
             {(modelOptions.length > 0 || model || modelError) && onModelChange && (
               <ModelSelector
+                ref={modelSelectorRef}
                 options={modelOptions}
                 value={model}
                 onChange={onModelChange}
