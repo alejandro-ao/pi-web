@@ -1714,8 +1714,9 @@ export const ChatInput = memo(forwardRef<ChatInputHandle, Props>(function ChatIn
         margin: 0,
         border: 0,
         background: "transparent",
-        padding: compact ? 0 : "0 16px 8px",
-        paddingRight: compact ? 0 : isMobile ? 16 : 52, // desktop: 16px base + 36px for ChatMinimap alignment
+        padding: compact ? 0 : "0 var(--chat-column-padding, 16px) 8px",
+        // Match both the minimap rail and the transcript's actual scrollbar gutter.
+        paddingRight: compact ? 0 : `calc(var(--chat-column-padding, 16px) + var(--chat-rail-width, ${isMobile ? 0 : 36}px) + var(--chat-scrollbar-width, 0px))`,
         opacity: builtinCommandPending ? 0.5 : 1,
         transition: "opacity 0.15s",
       }}

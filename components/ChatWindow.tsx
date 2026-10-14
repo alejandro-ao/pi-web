@@ -1,7 +1,7 @@
 "use client";
 import { registerAbortHandler } from "@/hooks/useKeyboardShortcuts";
 import Image from "next/image";
-import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import type { AgentMessage, AssistantContentBlock, AssistantMessage, BashExecutionMessage, BlockingExtensionUiRequest, ExtensionUiRequest, SessionInfo, SessionTreeNode, ToolResultMessage } from "@/lib/types";
 import { normalizeCustomPanelLines } from "@/lib/ansi";
@@ -829,6 +829,23 @@ export function ChatWindow({ session, searchTarget, onSearchTargetHandled, initi
 
   const isEmptyNew = isNew && messages.length === 0 && !isStreaming && !sessionBusy;
   useScrollbarVisibility(scrollContainerRef, Boolean(session?.id) || !isEmptyNew);
+
+  useLayoutEffect(() => {
+    const container = scrollContainerRef.current;
+    const shell = container?.closest<HTMLElement>(".chat-content");
+    if (!container || !shell) return;
+    const measure = () => {
+      const gutter = Math.max(0, container.offsetWidth - container.clientWidth);
+      shell.style.setProperty("--chat-scrollbar-width", `${gutter}px`);
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(container);
+    return () => {
+      observer.disconnect();
+      shell.style.removeProperty("--chat-scrollbar-width");
+    };
+  }, [scrollContainerRef, isEmptyNew, loading, error]);
   const messageCwd = session?.cwd ?? newSessionCwd ?? undefined;
   const promptAnchorSpacerRef = useRef<HTMLDivElement | null>(null);
   const promptAnchorSpacerHeightRef = useRef(0);
@@ -1008,7 +1025,11 @@ export function ChatWindow({ session, searchTarget, onSearchTargetHandled, initi
   return (
     <div
       className="chat-content relative flex h-full min-w-0 flex-col overflow-hidden"
-      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+      style={{
+        paddingBottom: "env(safe-area-inset-bottom)",
+        "--chat-column-padding": `${CHAT_COLUMN_PADDING}px`,
+        "--chat-rail-width": `${isMobile ? 0 : CHAT_MINIMAP_WIDTH}px`,
+      } as CSSProperties}
       onDragEnter={handleDragEnter}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
@@ -1081,7 +1102,7 @@ export function ChatWindow({ session, searchTarget, onSearchTargetHandled, initi
           className="scrollbar-subtle min-w-0 flex-1 overflow-x-hidden overflow-y-auto pt-4 [scrollbar-gutter:stable]"
           style={{ visibility: pendingScrollRestore ? "hidden" : undefined }}
         >
-          <div style={{ minWidth: 0, padding: `0 ${CHAT_COLUMN_PADDING}px` }}>
+          <div style={{ minWidth: 0, padding: "0 var(--chat-column-padding)" }}>
             <div ref={messageContentRef} onPointerUp={captureQuotedSelection} style={{ width: "100%", minWidth: 0, maxWidth: "var(--chat-content-max-width, 820px)", margin: "0 auto" }}>
             {(() => {
               let lastUserIdx = -1;
@@ -1449,7 +1470,7 @@ export function ChatWindow({ session, searchTarget, onSearchTargetHandled, initi
             .new-session-context in app/globals.css; the side padding and
             width are inline here). */}
         {isEmptyNew && (
-          <div className="new-session-hero" style={{ paddingLeft: 16, paddingRight: isMobile ? 16 : 52 }}>
+          <div className="new-session-hero" style={{ paddingLeft: "var(--chat-column-padding)", paddingRight: "calc(var(--chat-column-padding) + var(--chat-rail-width) + var(--chat-scrollbar-width, 0px))" }}>
             <div className="new-session-hero-inner" style={{ maxWidth: "var(--chat-content-max-width, 820px)" }}>
               <div className="new-session-brand">
                 <Image src="/icons/apple-touch-icon.png" width={40} height={40} alt="" priority className="new-session-logo" />

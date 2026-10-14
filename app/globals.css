@@ -2126,6 +2126,30 @@ span.token.table {
   display: inline;
 }
 
+/* Shared low-radius treatment, including legacy inline component styles.
+   True circles remain circles; pseudo-element activity rings are untouched. */
+:where(body *):not(:where(
+  svg, svg *,
+  .rounded-full,
+  [style*="border-radius: 50%"],
+  [style*="border-radius: 100%"],
+  [style*="border-radius: 0"],
+  .rounded-none,
+  .terminal-status-dot,
+  .file-viewer-live-indicator,
+  .project-picker-activity,
+  .session-tree-pinned-dot,
+  .session-tree-unread,
+  .session-tree-awaiting,
+  .session-tree-summary-dot,
+  .config-switch-knob,
+  .config-status-dot,
+  .settings-language-radio,
+  .settings-language-radio-dot
+)) {
+  border-radius: 2px !important;
+}
+
 .sticky-user-preview {
   animation: sticky-user-preview-in 280ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }

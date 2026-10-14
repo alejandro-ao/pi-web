@@ -197,28 +197,6 @@
   background: var(--bg-selected);
 }
 
-/* The selected row's mark, the tree's one use of the accent: a bar on the
-   box's left edge, before the chevron column, so it is found at a glance
-   even where --bg-selected is faint. The row (absolutely positioned) is its
-   containing block; inset from the top and bottom (a 14px bar on a 28px
-   row, 20px on a phone's 44px), the row's rounded corners never clip it.
-   A delete confirmation's red frame stands alone. */
-.session-tree-session.is-selected:not(.is-confirming)::before {
-  content: "";
-  position: absolute;
-  top: 7px;
-  bottom: 7px;
-  left: 0;
-  width: 3px;
-  border-radius: 0 2px 2px 0;
-  background: var(--accent);
-}
-
-.session-tree.is-mobile .session-tree-session.is-selected:not(.is-confirming)::before {
-  top: 12px;
-  bottom: 12px;
-}
-
 .session-tree-session.is-confirming {
   gap: 5px;
   background: rgba(239, 68, 68, 0.06);
