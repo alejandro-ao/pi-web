@@ -192,6 +192,7 @@ export interface SelectSessionOptions {
 }
 
 interface Props {
+  onFocusChat?: () => void;
   selectedSessionId: string | null;
   onSelectSession: (session: SessionInfo, isRestore?: boolean, entryId?: string, blockIndex?: number, options?: SelectSessionOptions) => void;
   /** projectKey: the target's project identity when it is known (a group's "+", the composer's bar). */
@@ -232,6 +233,8 @@ interface Props {
  * move goes through here, as the sidebar's own "+" buttons do.
  */
 export interface SessionSidebarControl {
+  /** Opens the Sessions search and focuses its input, even when already open. */
+  openSessionSearch(): void;
   /** Identity, then the sidebar's cwd, then `onNewSession`, as any new session. */
   startNewSessionIn(target: NewSessionTarget): void;
   /**
@@ -476,7 +479,7 @@ function buttonAnchor(element: HTMLElement, align: "start" | "end"): SidebarMenu
   return { kind: "rect", rect: { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom }, align };
 }
 
-export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSession, controlRef, onNewSessionContextChange, initialSessionId, initialSessionLinked, skipInitialProjectSelection, onInitialRestoreDone, refreshKey, onSessionDeleted, selectedCwd: selectedCwdProp, onCwdChange, onOpenFile, onOpenTerminal, explorerRefreshKey, onExplorerRefresh, onAtMention, onAtMentions, onBackgroundTaskDone, onRunningSessionIdsChange, onSessionsChange }: Props) {
+export function SessionSidebar({ onFocusChat, selectedSessionId, onSelectSession, onNewSession, controlRef, onNewSessionContextChange, initialSessionId, initialSessionLinked, skipInitialProjectSelection, onInitialRestoreDone, refreshKey, onSessionDeleted, selectedCwd: selectedCwdProp, onCwdChange, onOpenFile, onOpenTerminal, explorerRefreshKey, onExplorerRefresh, onAtMention, onAtMentions, onBackgroundTaskDone, onRunningSessionIdsChange, onSessionsChange }: Props) {
   const { t } = useI18n();
   const isMobile = useIsMobile();
   const [allSessions, setAllSessions] = useState<SessionInfo[]>([]);
@@ -513,6 +516,13 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
   const [fileSearchOpen, setFileSearchOpen] = useState(false);
   const [sessionSearchOpen, setSessionSearchOpen] = useState(false);
   const [sessionSearchQuery, setSessionSearchQuery] = useState("");
+  const [sessionSearchFocusRequest, setSessionSearchFocusRequest] = useState(0);
+  const sessionSearchInputRef = useRef<HTMLInputElement>(null);
+  const openSessionSearchRef = useRef<() => void>(() => {});
+  useEffect(() => {
+    if (sessionSearchFocusRequest === 0) return;
+    sessionSearchInputRef.current?.focus({ preventScroll: true });
+  }, [sessionSearchFocusRequest]);
   const [changesCount, setChangesCount] = useState(0);
   const [changesCollapsed, setChangesCollapsed] = useState(true);
   const [showIgnoredFiles, setShowIgnoredFiles] = useState(false);
@@ -1294,6 +1304,7 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
   startNewSessionInRef.current = startNewSessionIn;
 
   useImperativeHandle(controlRef, () => ({
+    openSessionSearch: () => openSessionSearchRef.current(),
     startNewSessionIn: (target) => startNewSessionInRef.current(target),
     openFolderForNewSession: (onPicked, returnFocusTo) => {
       folderPickRef.current = onPicked;
@@ -1570,6 +1581,43 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
     setSidebarTab(tab);
     saveSidebarTab(tab);
   }, [stacked]);
+
+  openSessionSearchRef.current = () => {
+    setMenu(null);
+    switchTab("sessions");
+    setSessionSearchOpen(true);
+    setSessionSearchFocusRequest((request) => request + 1);
+  };
+
+  const handleSessionSearchKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+    if (!sessionSearchOpen || event.nativeEvent.isComposing || event.keyCode === 229) return;
+    if (event.key === "Escape") {
+      event.preventDefault();
+      event.stopPropagation();
+      setSessionSearchOpen(false);
+      setSessionSearchQuery("");
+      if (onFocusChat) onFocusChat();
+      else searchButtonRef.current?.focus({ preventScroll: true });
+      return;
+    }
+    const rows = Array.from(sessionsPanelRef.current?.querySelectorAll<HTMLButtonElement>("button[data-session-search-result]") ?? []);
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      // With an empty query, leave the normal session tree's keys alone.
+      if (!sessionSearchQuery.trim()) return;
+      event.preventDefault();
+      event.stopPropagation();
+      if (!rows.length) return;
+      const current = rows.indexOf(document.activeElement as HTMLButtonElement);
+      const next = current < 0 ? (event.key === "ArrowDown" ? 0 : rows.length - 1)
+        : (current + (event.key === "ArrowDown" ? 1 : -1) + rows.length) % rows.length;
+      rows[next].focus({ preventScroll: true });
+      rows[next].scrollIntoView({ block: "nearest" });
+    } else if (event.key === "Enter" && event.target === sessionSearchInputRef.current) {
+      event.preventDefault();
+      event.stopPropagation();
+      rows[0]?.click();
+    }
+  };
 
   // Every fold and unfold goes through here (the toggle, revealFiles, the
   // file search, changes and upload keys, a file manager error), and moves;
@@ -2638,11 +2686,13 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
         aria-labelledby={stacked ? undefined : "session-sidebar-tab-sessions"}
         hidden={!stacked && sidebarTab !== "sessions"}
         className="sidebar-panel sidebar-sessions-panel"
+        onKeyDown={handleSessionSearchKeyDown}
         onScrollCapture={rememberScroll}
       >
         {sessionSearchOpen && (
           <div className="sidebar-search">
             <input
+              ref={sessionSearchInputRef}
               id="session-search-input"
               type="search"
               autoFocus
@@ -2651,12 +2701,6 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
               aria-label={t("sidebar.searchSessions")}
               placeholder={t("sidebar.searchSessions")}
               onChange={(event) => setSessionSearchQuery(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Escape" && !event.nativeEvent.isComposing && event.keyCode !== 229) {
-                  event.stopPropagation();
-                  setSessionSearchQuery("");
-                }
-              }}
               className="sidebar-search-input"
             />
           </div>

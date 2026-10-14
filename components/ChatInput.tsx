@@ -104,6 +104,7 @@ interface Props {
 }
 
 export interface ChatInputHandle {
+  focus: () => void;
   insertText: (text: string) => void;
   insertIfEmpty: (text: string) => void;
   replaceMessage: (message: UserMessage) => void;
@@ -287,6 +288,7 @@ type SlashCommandSource = SlashCommandPaletteItem["source"];
 const BUILTIN_SLASH_COMMANDS: BuiltinSlashCommand[] = [
   { name: "new", description: "chat.commandNew", source: "builtin" },
   { name: "settings", description: "chat.commandSettings", source: "builtin", availableWhileStreaming: true },
+  { name: "resume", description: "chat.commandResume", source: "builtin", availableWhileStreaming: true },
   { name: "model", description: "chat.commandModel", source: "builtin" },
   { name: "thinking", description: "chat.commandThinking", source: "builtin", availableWhileStreaming: true },
   { name: "compact", description: "chat.commandCompact", source: "builtin" },
@@ -749,6 +751,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandle, Props>(function ChatIn
   attachedImagesRef.current = attachedImages;
 
   useImperativeHandle(ref, () => ({
+    focus: () => textareaRef.current?.focus({ preventScroll: true }),
     insertIfEmpty(text: string) {
       const ta = textareaRef.current;
       const current = ta ? ta.value : value;

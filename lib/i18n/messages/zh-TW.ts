@@ -591,6 +591,7 @@ export const zhTWLocale: LocalePlugin = {
     "chat.prompts": "提示詞",
     "chat.skills": "技能",
     "chat.dormant": "休眠",
+    "chat.commandResume": "尋找並繼續已儲存的工作階段",
     "chat.commandSettings": "開啟設定",
     "chat.commandThinking": "選擇推理層級，或直接設定",
     "chat.commandModel": "選擇模型，或使用 provider/model 切換",

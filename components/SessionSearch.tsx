@@ -58,6 +58,7 @@ export function SessionSearch({ open, query, children, selectedSessionId, onSele
       {response?.results.map(({ session, entryId, blockIndex, before, match, after }) => (
         <button
           key={session.id}
+          data-session-search-result
           type="button"
           onClick={() => onSelectSession(session, entryId, blockIndex)}
           aria-current={session.id === selectedSessionId ? "true" : undefined}

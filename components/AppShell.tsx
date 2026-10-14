@@ -210,6 +210,7 @@ export function AppShell() {
   const [initialCwdError, setInitialCwdError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [sessionKey, setSessionKey] = useState(0);
+  const [autoFocusSelectedSession, setAutoFocusSelectedSession] = useState(false);
   const sessionScrollPositionsRef = useRef(new Map<string, ChatScrollPosition>());
   const handleSessionScrollPositionChange = useCallback((sessionId: string, position: ChatScrollPosition) => {
     sessionScrollPositionsRef.current.set(sessionId, position);
@@ -838,6 +839,8 @@ export function AppShell() {
   }, [activeCwd, changeFileWorkspace, invalidateWorkspaceRestore, newSessionCwd, router, selectedSession, restoreWorkspaceContext]);
 
   const handleSelectSession = useCallback((session: SessionInfo, isRestore = false, entryId?: string, blockIndex?: number, options?: SelectSessionOptions) => {
+    const focusComposer = !isRestore && !options?.keepSidebarOpen;
+    setAutoFocusSelectedSession(focusComposer);
     setSearchTarget(entryId ? { sessionId: session.id, entryId, blockIndex } : null);
     invalidateWorkspaceRestore();
     const activeDraftKey = activeNewSessionDraftKeyRef.current;
@@ -861,7 +864,8 @@ export function AppShell() {
       const sameProject =
         workspaceKeyOf(selectedSession) === workspaceKeyOf(session);
       if (selectedSession.id === session.id && sameProject) {
-        if (isMobile) setSidebarOpen(false);
+        if (isMobile && !options?.keepSidebarOpen) setSidebarOpen(false);
+        if (focusComposer) chatInputRef.current?.focus();
         return;
       }
     }
@@ -936,6 +940,16 @@ export function AppShell() {
     if (isMobile) setSidebarOpen(false);
     router.replace(`?cwd=${encodeURIComponent(cwd)}`, { scroll: false });
   }, [activeCwd, changeFileWorkspace, invalidateWorkspaceRestore, isMobile, newSessionCwd, router, selectedSession]);
+
+  const handleFocusChat = useCallback(() => {
+    if (isMobile) setSidebarOpen(false);
+    chatInputRef.current?.focus();
+  }, [isMobile]);
+
+  const handleResumeSession = useCallback(() => {
+    setSidebarOpen(true);
+    sidebarControlRef.current?.openSessionSearch();
+  }, []);
 
   const handleSlashNewSession = useCallback(() => {
     const cwd = selectedSession?.cwd ?? newSessionCwd ?? activeCwd;
@@ -1407,6 +1421,7 @@ export function AppShell() {
         selectedSessionId={selectedSession?.id ?? null}
         onSelectSession={handleSelectSession}
         onNewSession={handleNewSession}
+        onFocusChat={handleFocusChat}
         controlRef={sidebarControlRef}
         onNewSessionContextChange={handleSidebarNewSessionContext}
         initialSessionId={initialSessionId}
@@ -2548,6 +2563,7 @@ export function AppShell() {
               newSessionCwd={effectiveNewSessionCwd}
               newSessionDraftKey={newSessionDraftKey}
               autoFocusNewSession={newSessionBarFocusRef.current === null}
+              autoFocusSession={autoFocusSelectedSession}
               onNewSession={handleSlashNewSession}
               newSessionContextBar={newSessionContextBar}
               initialNewSessionChoices={selectedSession === null ? carriedNewSessionChoices : null}
@@ -2566,6 +2582,7 @@ export function AppShell() {
               onSessionStatsChange={handleSessionStatsChange}
               onSessionStatsPanelOpen={openSessionStatsPanel}
               onOpenSettings={openSettingsSection}
+              onResumeSession={handleResumeSession}
               onContextUsageChange={handleContextUsageChange}
               onOpenFile={handleOpenLinkedFile}
               onFilesUploaded={handleExplorerRefresh}

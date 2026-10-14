@@ -52,6 +52,8 @@ interface Props {
   newSessionCwd: string | null;
   newSessionDraftKey: string | null;
   autoFocusNewSession?: boolean;
+  /** Explicit sidebar selections focus the composer after its history loads. */
+  autoFocusSession?: boolean;
   onNewSession?: () => void;
   /** Shown above the composer while a fresh composer is still empty: where its session starts. */
   newSessionContextBar?: ReactNode;
@@ -73,6 +75,7 @@ interface Props {
   onSessionStatsPanelOpen?: () => void;
   /** Opens Settings on a section: a bare `/mcp` that pi's built-in MCP extension owns opens Settings › MCP. */
   onOpenSettings?: (section: SettingsSection) => void;
+  onResumeSession?: () => void;
   onContextUsageChange?: (usage: { percent: number | null; contextWindow: number; tokens: number | null } | null) => void;
   onOpenFile?: (filePath: string, page?: number) => void;
   /** Files dropped onto the chat were written into the working directory. */
@@ -239,7 +242,7 @@ function ProcessDetailsGroup({ messageCount, toolCallCount, defaultExpanded = fa
   );
 }
 
-export function ChatWindow({ session, searchTarget, onSearchTargetHandled, initialScrollPosition, onScrollPositionChange, sessionRunning, newSessionCwd, newSessionDraftKey, autoFocusNewSession = true, onNewSession, newSessionContextBar, initialNewSessionChoices, onNewSessionChoicesChange, onAgentEnd, onToolEnd, onAttentionNeeded, onSessionCreated, onSessionForked, modelsRefreshKey, chatInputRef, onBranchDataChange, onSystemPromptChange, onSystemToolsChange, onSystemInfoLoaderChange, onSessionStatsChange, onSessionStatsPanelOpen, onOpenSettings, onContextUsageChange, onOpenFile, onFilesUploaded, onOpenSubagent, onAskInNewChat, quoteSelectionEnabled = false, initialPrompt, onInitialPromptConsumed, soundEnabled = true, onSoundToggle, playDoneSound = () => {}, unlockAudio, holdAudio }: Props) {
+export function ChatWindow({ session, searchTarget, onSearchTargetHandled, initialScrollPosition, onScrollPositionChange, sessionRunning, newSessionCwd, newSessionDraftKey, autoFocusNewSession = true, autoFocusSession = false, onNewSession, newSessionContextBar, initialNewSessionChoices, onNewSessionChoicesChange, onAgentEnd, onToolEnd, onAttentionNeeded, onSessionCreated, onSessionForked, modelsRefreshKey, chatInputRef, onBranchDataChange, onSystemPromptChange, onSystemToolsChange, onSystemInfoLoaderChange, onSessionStatsChange, onSessionStatsPanelOpen, onOpenSettings, onResumeSession, onContextUsageChange, onOpenFile, onFilesUploaded, onOpenSubagent, onAskInNewChat, quoteSelectionEnabled = false, initialPrompt, onInitialPromptConsumed, soundEnabled = true, onSoundToggle, playDoneSound = () => {}, unlockAudio, holdAudio }: Props) {
   const { t } = useI18n();
   const isMobile = useIsMobile();
   const completionNotificationsEnabled = session?.relation?.kind !== "subagent";
@@ -295,7 +298,7 @@ export function ChatWindow({ session, searchTarget, onSearchTargetHandled, initi
   } = useAgentSession({
     session, sessionRunning, newSessionCwd, newSessionDraftKey, onNewSession, initialNewSessionChoices, onNewSessionChoicesChange, onAgentEnd: wrappedOnAgentEnd, onToolEnd, onAttentionNeeded, onSessionCreated, onSessionForked,
     modelsRefreshKey, chatInputRef, onBranchDataChange, onSystemPromptChange, onSystemToolsChange, onSystemInfoLoaderChange, onSessionStatsPanelOpen,
-    onOpenSettings,
+    onOpenSettings, onResumeSession,
     deferInitialScroll: Boolean(pendingScrollRestore),
   });
   // Only whether a reply is streaming and has content yet: the chunks themselves
@@ -870,7 +873,7 @@ export function ChatWindow({ session, searchTarget, onSearchTargetHandled, initi
   const chatInputElement = (
     <ChatInput
       ref={chatInputRef}
-      autoFocus={isNew && autoFocusNewSession}
+      autoFocus={isNew ? autoFocusNewSession : autoFocusSession}
       onSend={handleSend}
       onAbort={handleAbort}
       onSteer={agentRunning ? handleSteer : undefined}

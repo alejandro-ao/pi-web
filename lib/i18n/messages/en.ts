@@ -591,6 +591,7 @@ export const enLocale: LocalePlugin = {
     "chat.prompts": "Prompts",
     "chat.skills": "Skills",
     "chat.dormant": "dormant",
+    "chat.commandResume": "Find and resume a saved session",
     "chat.commandSettings": "Open Settings",
     "chat.commandThinking": "Choose a reasoning level, or set it directly",
     "chat.commandModel": "Choose a model, or switch with provider/model",

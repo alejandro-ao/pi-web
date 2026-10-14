@@ -57,6 +57,7 @@ function hook({ commands = [], pending = null, getCommands = async () => ({ comm
   const calls = { notices: [], opened: [], requests: [], lists: [], errors: [], loading: [] };
   const scope = {
     onNewSession: undefined,
+    onResumeSession: undefined,
     sessionIdRef: { current: "session-1" },
     ensureNewSession: async () => "session-1",
     addNotice: (notice) => calls.notices.push(notice),
@@ -77,6 +78,22 @@ function hook({ commands = [], pending = null, getCommands = async () => ({ comm
   for (const name of CALLBACKS) scope[name] = compiled[name](scope);
   return { run: scope.handleBuiltinSlashCommand, scope, calls };
 }
+
+test("/resume opens session search without starting or prompting a session", async () => {
+  const { run, scope, calls } = hook();
+  let opened = 0;
+  scope.onResumeSession = () => { opened++; };
+  scope.sessionIdRef.current = null;
+  scope.ensureNewSession = () => { assert.fail("must not start a session"); };
+  assert.deepEqual(await run("/resume"), { handled: true, action: "openSessionSearch" });
+  assert.equal(opened, 1);
+  assert.deepEqual(calls.requests, []);
+  assert.deepEqual(calls.notices, []);
+  assert.deepEqual(await run("/resume extra"), { handled: true, error: "Usage: /resume" });
+  assert.equal(opened, 1);
+  scope.onResumeSession = undefined;
+  assert.deepEqual(await run("/resume"), { handled: false });
+});
 
 test("/settings opens the remembered section without starting a session", async () => {
   const { run, scope, calls } = hook();
