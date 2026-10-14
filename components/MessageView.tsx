@@ -422,7 +422,7 @@ function UserMessageView({ message, cwd, onOpenFile, entryId, onFork, forking, o
             background: isEditing ? "color-mix(in srgb, var(--accent) 14%, var(--user-bg))" : "var(--user-bg)",
             border: isEditing ? "1px solid color-mix(in srgb, var(--accent) 62%, var(--user-bg))" : "1px solid rgba(59,130,246,0.2)",
             boxShadow: isEditing ? "0 0 0 2px color-mix(in srgb, var(--accent) 16%, transparent)" : undefined,
-            borderRadius: 12,
+            borderRadius: 6,
             padding: "8px 12px",
             fontSize: "calc(14px + var(--chat-font-size-offset, 0px))",
             lineHeight: 1.6,
@@ -1055,7 +1055,7 @@ export function ThinkingBlock({ block, duration, sessionId, entryId, blockIndex 
     <div style={{
       display: "flex", alignItems: "flex-start", gap: 6, minWidth: 0,
       border: "1px solid var(--border)",
-      borderRadius: 7,
+      borderRadius: 6,
       padding: "6px 10px",
       background: "var(--bg)",
       fontFamily: "var(--font-mono)",
@@ -1179,7 +1179,7 @@ function ToolCallBlock({ block, result, duration, onOpenSubagent }: { block: Too
   return (
     <div
       style={{
-        borderRadius: 7,
+        borderRadius: 6,
         overflow: "hidden",
         fontSize: 12,
         border: isError ? "1px solid rgba(248,113,113,0.45)" : "1px solid rgba(34,197,94,0.25)",

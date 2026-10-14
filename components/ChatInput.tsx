@@ -2249,7 +2249,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandle, Props>(function ChatIn
               border: compact ? "none" : `1px solid ${bashMode ? "var(--tool-bg)" : isStreaming && (onSteer || onFollowUp)
                 ? "rgba(234,179,8,0.4)"
                 : "color-mix(in srgb, var(--border) 70%, transparent)"}`,
-              borderRadius: compact ? 0 : 14,
+              borderRadius: compact ? 0 : 6,
               padding: compact ? 0 : isMobile ? "6px 6px 6px 12px" : "10px 10px 10px 14px",
               boxShadow: compact ? "none" : "0 1px 2px rgba(15,23,42,0.04), 0 8px 24px -12px rgba(15,23,42,0.10)",
               transition: "border-color 0.15s, background 0.15s, box-shadow 0.15s",
@@ -2314,9 +2314,10 @@ export const ChatInput = memo(forwardRef<ChatInputHandle, Props>(function ChatIn
                   onClick={() => sendQueued("steer")}
                   disabled={!canQueueStreamingMessage}
                   title={t("chat.steerHint")}
+                  aria-label={t("chat.steer")}
                   style={{
                     display: "flex", alignItems: "center", gap: 5,
-                    padding: "7px 12px",
+                    width: 36, height: 36, padding: 0, justifyContent: "center",
                     background: canQueueStreamingMessage ? "rgba(234,179,8,0.12)" : "none",
                     border: "1px solid rgba(234,179,8,0.35)",
                     borderRadius: 8,
@@ -2329,7 +2330,6 @@ export const ChatInput = memo(forwardRef<ChatInputHandle, Props>(function ChatIn
                   <svg width="12" height="12" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M5 1 L9 5 L5 9" /><line x1="1" y1="5" x2="9" y2="5" />
                   </svg>
-                  {t("chat.steer")}
                 </button>
               )}
               {onFollowUp && (
@@ -2337,10 +2337,11 @@ export const ChatInput = memo(forwardRef<ChatInputHandle, Props>(function ChatIn
                   onClick={() => sendQueued("followup")}
                   disabled={!canQueueStreamingMessage}
                   title={`${t("chat.followUpHint")} (${isMobile ? "Ctrl/Cmd+" : ""}Alt/Option+Enter)`}
+                  aria-label={t("chat.followUp")}
                   aria-keyshortcuts={isMobile ? "Control+Alt+Enter Meta+Alt+Enter" : "Alt+Enter"}
                   style={{
                     display: "flex", alignItems: "center", gap: 5,
-                    padding: "7px 12px",
+                    width: 36, height: 36, padding: 0, justifyContent: "center",
                     background: canQueueStreamingMessage ? "rgba(129,140,248,0.12)" : "none",
                     border: "1px solid rgba(129,140,248,0.35)",
                     borderRadius: 8,
@@ -2354,7 +2355,6 @@ export const ChatInput = memo(forwardRef<ChatInputHandle, Props>(function ChatIn
                     <line x1="5" y1="1" x2="5" y2="6" /><polyline points="2.5 3.5 5 1 7.5 3.5" />
                     <line x1="2" y1="9" x2="8" y2="9" />
                   </svg>
-                  {t("chat.followUp")}
                 </button>
               )}
             </div>
@@ -2368,8 +2368,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandle, Props>(function ChatIn
                 flexShrink: 0,
                 alignSelf: "flex-end",
                 display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-                // Mobile: icon-only so the placeholder and draft keep the width.
-                ...(isMobile ? { width: 36, height: 36, padding: 0 } : { padding: "7px 14px" }),
+                width: 36, height: 36, padding: 0,
                 background: (value.trim() || attachedImages.length) ? "var(--accent)" : "var(--bg-panel)",
                 border: "none",
                 borderRadius: 8,
@@ -2386,7 +2385,6 @@ export const ChatInput = memo(forwardRef<ChatInputHandle, Props>(function ChatIn
                 <line x1="2" y1="7" x2="11" y2="7" />
                 <polyline points="7.5 3 12 7 7.5 11" />
               </svg>
-              {!isMobile && t("chat.send")}
             </button>
           )}
           </div>
@@ -2714,8 +2712,8 @@ export const ChatInput = memo(forwardRef<ChatInputHandle, Props>(function ChatIn
                   onClick={isCompacting ? onAbortCompaction : (e) => { if (!isStrayClick(e)) onCompact(); }}
                   style={{
                     display: "flex", alignItems: "center", justifyContent: "center", gap: 5,
-                    padding: isMobile ? "0 6px" : "8px 12px",
-                    width: isMobile ? "auto" : undefined,
+                    padding: 0,
+                    width: 32,
                     height: 32,
                     background: isCompacting ? "rgba(239,68,68,0.08)" : "none",
                     border: "none",
@@ -2737,12 +2735,12 @@ export const ChatInput = memo(forwardRef<ChatInputHandle, Props>(function ChatIn
                    aria-label={isCompacting ? t("chat.stopCompaction") : t("chat.compactContext")}
                 >
                   {isCompacting ? (
-                    <><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><rect x="2" y="2" width="6" height="6" rx="1" fill="currentColor" /></svg>{(!isMobile || controlsMenuOpen) && <span style={{ whiteSpace: "nowrap" }}>{t("chat.compacting")}</span>}</>
+                    <><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><rect x="2" y="2" width="6" height="6" rx="1" fill="currentColor" /></svg></>
                   ) : (
                     <><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <polyline points="4 14 10 14 10 20" /><polyline points="20 10 14 10 14 4" />
                       <line x1="10" y1="14" x2="3" y2="21" /><line x1="21" y1="3" x2="14" y2="10" />
-                    </svg>{(!isMobile || controlsMenuOpen) && <span style={{ whiteSpace: "nowrap" }}>{t("chat.compact")}</span>}</>
+                    </svg></>
                   )}
                 </button>
               </div>
@@ -2752,9 +2750,10 @@ export const ChatInput = memo(forwardRef<ChatInputHandle, Props>(function ChatIn
               <button
                 onClick={onAbort}
                  title={t("chat.stopAgent")}
+                aria-label={t("chat.stop")}
                 style={{
-                  display: "flex", alignItems: "center", gap: 6,
-                  padding: "8px 14px",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  width: 32, padding: 0,
                   height: 32,
                   background: "rgba(239,68,68,0.08)",
                   border: "1px solid rgba(239,68,68,0.3)",
@@ -2771,7 +2770,6 @@ export const ChatInput = memo(forwardRef<ChatInputHandle, Props>(function ChatIn
                 <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
                   <rect x="1.5" y="1.5" width="7" height="7" rx="1.5" fill="currentColor" />
                 </svg>
-                 {t("chat.stop")}
               </button>
             )}
 
