@@ -57,6 +57,8 @@ const nextConfig: NextConfig = {
   // loopback and the RFC1918 LAN ranges so the dev server stays reachable
   // from other machines on the same LAN.
   allowedDevOrigins: [
+    // Reuse the exact trusted proxy hosts for development assets and HMR.
+    ...(process.env.PI_WEB_ALLOWED_HOSTS ?? "").split(",").map((host) => host.trim()).filter(Boolean),
     "127.0.0.1",
     "10.*.*.*",
     // 172.16.0.0/12
