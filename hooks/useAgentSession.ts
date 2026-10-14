@@ -183,6 +183,7 @@ export interface UseAgentSessionOptions {
   onAttentionNeeded?: (request: BlockingExtensionUiRequest) => void;
   onSessionCreated?: (session: SessionInfo, sourceDraftKey: string) => void;
   onSessionForked?: (newSessionId: string) => void;
+  onNewSession?: () => void;
   modelsRefreshKey?: number;
   chatInputRef?: React.RefObject<ChatInputHandle | null>;
   onBranchDataChange?: (tree: SessionTreeNode[], activeLeafId: string | null, onLeafChange: (leafId: string | null) => void, locked: boolean) => void;
@@ -499,6 +500,7 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
     setToolPresetState(getPreferredToolPreset());
   }, [existingSessionId, isNew, setToolPresetState]);
 
+  const onNewSession = opts.onNewSession;
   const onNewSessionChoicesChange = opts.onNewSessionChoicesChange;
   useEffect(() => {
     if (isNew) onNewSessionChoicesChange?.({ model: newSessionModel, thinkingLevel: newSessionThinkingLevel });
@@ -2138,6 +2140,16 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
 
     const [, commandName, rawArgs = ""] = match;
     const args = rawArgs.trim();
+    // Navigation must not start an AgentSession for the composer being left.
+    if (commandName === "new") {
+      if (args) {
+        addNotice({ type: "error", message: "Usage: /new" });
+        return { handled: true, error: "Usage: /new" };
+      }
+      if (!onNewSession) return { handled: false };
+      onNewSession();
+      return { handled: true };
+    }
     const sid = sessionIdRef.current ?? await ensureNewSession();
     const complete = (result: BuiltinSlashCommandResult): BuiltinSlashCommandResult => {
       if (!result.handled) return result;
@@ -2263,7 +2275,7 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
     } finally {
       if (commandName === "compact") setIsCompacting(false);
     }
-  }, [activeLeafId, addNotice, ensureNewSession, isCompacting, loadModels, loadSession, loadSlashCommands, loadTools, promoteNewSession, onOpenSettings, onSessionForked, onSessionStatsPanelOpen, slashCommandsForMcp]);
+  }, [activeLeafId, addNotice, ensureNewSession, isCompacting, loadModels, loadSession, loadSlashCommands, loadTools, promoteNewSession, onOpenSettings, onSessionForked, onSessionStatsPanelOpen, onNewSession, slashCommandsForMcp]);
 
   // Let AgentSession.prompt decide atomically whether to queue against the
   // current run or start a new turn if it settled while the request was in

@@ -937,6 +937,11 @@ export function AppShell() {
     router.replace(`?cwd=${encodeURIComponent(cwd)}`, { scroll: false });
   }, [activeCwd, changeFileWorkspace, invalidateWorkspaceRestore, isMobile, newSessionCwd, router, selectedSession]);
 
+  const handleSlashNewSession = useCallback(() => {
+    const cwd = selectedSession?.cwd ?? newSessionCwd ?? activeCwd;
+    if (cwd) handleNewSession(`slash-${Date.now()}`, cwd);
+  }, [selectedSession, newSessionCwd, activeCwd, handleNewSession]);
+
   // Global keyboard shortcuts (handles Esc, Ctrl+Alt+N etc.)
   useGlobalKeyboardShortcuts({
     onNewSession: (cwd: string) => handleNewSession(`kb-${Date.now()}`, cwd),
@@ -2542,6 +2547,8 @@ export function AppShell() {
               sessionRunning={Boolean(selectedSession && runningSessionIds.has(selectedSession.id))}
               newSessionCwd={effectiveNewSessionCwd}
               newSessionDraftKey={newSessionDraftKey}
+              autoFocusNewSession={newSessionBarFocusRef.current === null}
+              onNewSession={handleSlashNewSession}
               newSessionContextBar={newSessionContextBar}
               initialNewSessionChoices={selectedSession === null ? carriedNewSessionChoices : null}
               onNewSessionChoicesChange={handleNewSessionChoicesChange}

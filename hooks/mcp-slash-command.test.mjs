@@ -56,6 +56,7 @@ function deferred() {
 function hook({ commands = [], pending = null, getCommands = async () => ({ commands: [] }), openSettings = true } = {}) {
   const calls = { notices: [], opened: [], requests: [], lists: [], errors: [], loading: [] };
   const scope = {
+    onNewSession: undefined,
     sessionIdRef: { current: "session-1" },
     ensureNewSession: async () => "session-1",
     addNotice: (notice) => calls.notices.push(notice),
@@ -76,6 +77,26 @@ function hook({ commands = [], pending = null, getCommands = async () => ({ comm
   for (const name of CALLBACKS) scope[name] = compiled[name](scope);
   return { run: scope.handleBuiltinSlashCommand, scope, calls };
 }
+
+test("/new navigates without starting or prompting a backend session", async () => {
+  const { run, scope, calls } = hook();
+  let opened = 0;
+  scope.onNewSession = () => { opened++; };
+  scope.sessionIdRef.current = null;
+  scope.ensureNewSession = () => { throw new Error("must not start a session"); };
+  assert.deepEqual(await run("/new"), { handled: true });
+  assert.equal(opened, 1);
+  assert.deepEqual(calls.requests, []);
+  assert.deepEqual(calls.notices, []);
+});
+
+test("/new rejects arguments without navigating or starting a session", async () => {
+  const { run, scope, calls } = hook();
+  scope.onNewSession = () => { assert.fail("must not navigate"); };
+  scope.ensureNewSession = () => { assert.fail("must not start a session"); };
+  assert.deepEqual(await run("/new extra"), { handled: true, error: "Usage: /new" });
+  assert.equal(calls.notices[0].type, "error");
+});
 
 test("a bare /mcp the built-in owns opens Settings › MCP with no notice and no request", async () => {
   const { run, calls } = hook({ commands: [deploy, builtinMcp] });

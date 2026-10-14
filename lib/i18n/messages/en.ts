@@ -591,6 +591,7 @@ export const enLocale: LocalePlugin = {
     "chat.prompts": "Prompts",
     "chat.skills": "Skills",
     "chat.dormant": "dormant",
+    "chat.commandNew": "Start a new session",
     "chat.commandCompact": "Compress context, optionally with instructions",
     "chat.commandAutoCompact": "Toggle automatic context compaction in settings",
     "chat.commandReload": "Reload extensions, skills, prompts, and tools",

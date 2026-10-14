@@ -96,6 +96,7 @@ interface Props {
   onSoundToggle?: () => void;
   onAudioUnlock?: () => void;
   draftKey?: string;
+  autoFocus?: boolean;
   /** Session working directory — enables the @ file autocomplete menu */
   cwd?: string | null;
   /** Files picked with the attach button, handled like files dropped onto the chat. Without it the button takes images only. */
@@ -284,6 +285,7 @@ type SlashCommandPaletteItem = SlashCommandInfo | BuiltinSlashCommand;
 type SlashCommandSource = SlashCommandPaletteItem["source"];
 
 const BUILTIN_SLASH_COMMANDS: BuiltinSlashCommand[] = [
+  { name: "new", description: "chat.commandNew", source: "builtin" },
   { name: "compact", description: "chat.commandCompact", source: "builtin" },
   { name: "auto-compact", description: "chat.commandAutoCompact", source: "builtin" },
   { name: "reload", description: "chat.commandReload", source: "builtin" },
@@ -660,6 +662,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandle, Props>(function ChatIn
   soundEnabled, onSoundToggle, onAudioUnlock,
   onPromptWithStreamingBehavior,
   draftKey,
+  autoFocus = false,
   cwd,
   onAttachFiles,
   compact = false,
@@ -2258,6 +2261,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandle, Props>(function ChatIn
           >
           <textarea
             ref={textareaRef}
+            autoFocus={autoFocus}
             className="chat-input-textarea"
             aria-label={compact ? t("chat.quoteQuestion") : undefined}
             value={value}

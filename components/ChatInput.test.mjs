@@ -263,6 +263,17 @@ test("cycleListIndex wraps in both directions", () => {
   assert.equal(cycleListIndex(-1, 4, 1), 0);
 });
 
+test("composer autofocus is opt-in", () => {
+  const render = (autoFocus) => renderToStaticMarkup(
+    React.createElement(I18nProvider, null, React.createElement(ChatInput, {
+      onSend() {}, onAbort() {}, isStreaming: false, autoFocus,
+    })),
+  );
+  assert.match(render(true), /<textarea[^>]*autofocus=""/);
+  assert.doesNotMatch(render(false), /autofocus/);
+  assert.doesNotMatch(render(undefined), /autofocus/);
+});
+
 test("shows the follow-up shortcut in the button tooltip", () => {
   const html = renderToStaticMarkup(
     React.createElement(I18nProvider, null, React.createElement(ChatInput, {

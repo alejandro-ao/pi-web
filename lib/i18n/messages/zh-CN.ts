@@ -591,6 +591,7 @@ export const zhCNLocale: LocalePlugin = {
     "chat.prompts": "提示词",
     "chat.skills": "技能",
     "chat.dormant": "休眠",
+    "chat.commandNew": "开始新会话",
     "chat.commandCompact": "压缩上下文，可选附加说明",
     "chat.commandAutoCompact": "切换自动上下文压缩（全局设置）",
     "chat.commandReload": "重新加载扩展、技能、提示词和工具",
