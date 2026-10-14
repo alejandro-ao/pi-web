@@ -263,6 +263,12 @@ test("cycleListIndex wraps in both directions", () => {
   assert.equal(cycleListIndex(-1, 4, 1), 0);
 });
 
+test("tree is available while streaming and submits directly on Enter", () => {
+  assert.equal(canRunBuiltinSlashCommandWhileStreaming("/tree"), true);
+  assert.equal(canRunBuiltinSlashCommandWhileStreaming("/tree-extra"), false);
+  assert.equal(submitsSlashCommandOnEnter("/tree", { name: "tree", source: "builtin", availableWhileStreaming: true }, true), true);
+});
+
 test("resume is available while streaming and submits directly on Enter", () => {
   assert.equal(canRunBuiltinSlashCommandWhileStreaming("/resume"), true);
   assert.equal(canRunBuiltinSlashCommandWhileStreaming("/resume-extra"), false);

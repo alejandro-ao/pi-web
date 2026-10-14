@@ -289,6 +289,7 @@ const BUILTIN_SLASH_COMMANDS: BuiltinSlashCommand[] = [
   { name: "new", description: "chat.commandNew", source: "builtin" },
   { name: "settings", description: "chat.commandSettings", source: "builtin", availableWhileStreaming: true },
   { name: "resume", description: "chat.commandResume", source: "builtin", availableWhileStreaming: true },
+  { name: "tree", description: "chat.commandTree", source: "builtin", availableWhileStreaming: true },
   { name: "model", description: "chat.commandModel", source: "builtin" },
   { name: "thinking", description: "chat.commandThinking", source: "builtin", availableWhileStreaming: true },
   { name: "compact", description: "chat.commandCompact", source: "builtin" },

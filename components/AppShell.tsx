@@ -408,6 +408,18 @@ export function AppShell() {
     if (isMobile && isNarrowMobile && keepMobileToolbarOpen) setMobileToolbarMoreOpen(true);
   }, [isMobile, isNarrowMobile]);
 
+  const handleCloseBranches = useCallback(() => {
+    setActiveTopPanel(null);
+    setMobileToolbarMoreOpen(false);
+    chatInputRef.current?.focus();
+  }, []);
+
+  const handleOpenBranches = useCallback(() => {
+    if (isMobile) setSidebarOpen(false);
+    setActiveTopPanel("branches");
+    if (isMobile && isNarrowMobile) setMobileToolbarMoreOpen(true);
+  }, [isMobile, isNarrowMobile]);
+
   const handleSystemInfoToggle = useCallback((
     panel: "system" | "tools",
     keepMobileToolbarOpen = false,
@@ -1761,6 +1773,7 @@ export function AppShell() {
             containerRef={topBarRef}
             open={activeTopPanel === "branches"}
             onToggle={() => toggleTopPanel("branches")}
+            onClose={handleCloseBranches}
             hasSession
           />
         ))}
@@ -2298,6 +2311,7 @@ export function AppShell() {
               containerRef={topBarRef}
               open={activeTopPanel === "branches"}
               onToggle={() => toggleTopPanel("branches")}
+              onClose={handleCloseBranches}
               hasSession={showChat}
               hideInlineButton
             />
@@ -2583,6 +2597,7 @@ export function AppShell() {
               onSessionStatsPanelOpen={openSessionStatsPanel}
               onOpenSettings={openSettingsSection}
               onResumeSession={handleResumeSession}
+              onOpenBranches={handleOpenBranches}
               onContextUsageChange={handleContextUsageChange}
               onOpenFile={handleOpenLinkedFile}
               onFilesUploaded={handleExplorerRefresh}

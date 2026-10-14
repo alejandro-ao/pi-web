@@ -20,6 +20,9 @@ The copy then gets a name of its own, so the tree tells it from its source: the 
 
 The answer carries the copy's catalogue row (`readSessionInfo()` once the name is written, the list's own shape, plus `relation: { kind: "fork", originSessionId }`), so the sidebar shows it, named, before the next list load and the row does not move when that load replaces it.
 
+## Tree slash command
+`/tree` opens the existing Branches top panel through `onOpenBranches` without toggling it closed when already open. On phones it closes the sidebar and reveals the narrow mobile toolbar that hosts the navigator. It handles navigation before `ensureNewSession()`, never starts/prompts a backend session, and is available while streaming; the existing `locked` navigator stays read-only then. On opening, the navigator focuses an active-path row (or the first row, or the empty panel). Up/Down wrap through visible compressed branch rows; Home/End jump to the ends. Rows are native buttons, so Enter/Space use the existing selection callback; locked rows remain focusable for browsing but have no selection callback and `aria-disabled`. Escape closes through AppShell and focuses the chat composer. A fresh composer shows the navigator's existing no-session state. Arguments are refused with `Usage: /tree` and retain the draft.
+
 ## In-session branching waits for the run
 pi's `navigateTree()` refuses while streaming or compacting: the file has one leaf pointer that the run appends under, and navigating swaps the agent's context. So "Edit from here" is hidden while busy, the BranchNavigator renders read-only (`locked`) with a note, and `handleLeafChange` refuses (switching only the view would show the live run under another branch). To branch from a running session, fork it.
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo, useRef, useEffect } from "react";
+import { useState, useCallback, useMemo, useRef, useEffect, type KeyboardEvent } from "react";
 import type { BranchPreview, SessionEntry, SessionTreeNode } from "@/lib/types";
 import { useI18n } from "@/hooks/useI18n";
 
@@ -16,6 +16,8 @@ interface Props {
   open?: boolean;
   /** Called when the button is clicked in inline mode */
   onToggle?: () => void;
+  /** Close the panel and return focus to the composer. */
+  onClose?: () => void;
   /** Whether a session is currently active (used to show appropriate empty reason) */
   hasSession?: boolean;
   /** When inline, render icon-only (no text label) to save horizontal space */
@@ -142,10 +144,15 @@ function TreeNodeView({ node, activePathIds, depth, isLast, parentLines, onSelec
   return (
     <div>
       {/* This node row */}
-      <div
+      <button
+        type="button"
+        data-branch-row
+        data-active-path={isActive || undefined}
+        aria-disabled={!onSelect || undefined}
         style={{
           display: "flex",
           alignItems: "center",
+          width: "100%", border: "none", padding: 0, background: "none", textAlign: "left",
           height: 24,
           cursor: onSelect ? "pointer" : "default",
         }}
@@ -239,7 +246,7 @@ function TreeNodeView({ node, activePathIds, depth, isLast, parentLines, onSelec
         }}>
           {label}
         </span>
-      </div>
+      </button>
 
       {/* Children */}
       {rep.children.map((child, idx) => (
@@ -257,11 +264,13 @@ function TreeNodeView({ node, activePathIds, depth, isLast, parentLines, onSelec
   );
 }
 
-export function BranchNavigator({ tree, activeLeafId, onLeafChange, inline, containerRef, open: openProp, onToggle, hasSession, compact, hideInlineButton, locked = false }: Props) {
+export function BranchNavigator({ tree, activeLeafId, onLeafChange, inline, containerRef, open: openProp, onToggle, onClose, hasSession, compact, hideInlineButton, locked = false }: Props) {
   const { t } = useI18n();
   const [openInternal, setOpenInternal] = useState(false);
   const open = openProp !== undefined ? openProp : openInternal;
   const btnRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const panelFocusedRef = useRef(false);
   const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number; width: number } | null>(null);
 
   useEffect(() => {
@@ -277,6 +286,46 @@ export function BranchNavigator({ tree, activeLeafId, onLeafChange, inline, cont
     ro.observe(anchor);
     return () => ro.disconnect();
   }, [open, inline, containerRef]);
+
+  useEffect(() => {
+    if (!open) {
+      panelFocusedRef.current = false;
+      return;
+    }
+    const panel = panelRef.current;
+    if (!panel || panelFocusedRef.current || !panel.getClientRects().length) return;
+    panelFocusedRef.current = true;
+    const row = panel.querySelector<HTMLButtonElement>('button[data-active-path="true"]')
+      ?? panel.querySelector<HTMLButtonElement>("button[data-branch-row]");
+    (row ?? panel).focus({ preventScroll: true });
+    row?.scrollIntoView({ block: "nearest" });
+  }, [open, dropdownPos, tree]);
+
+  const handlePanelKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.nativeEvent.isComposing || event.keyCode === 229) return;
+    if (event.key === "Escape") {
+      event.preventDefault();
+      event.stopPropagation();
+      if (onClose) onClose();
+      else {
+        if (onToggle) onToggle();
+        else setOpenInternal(false);
+        btnRef.current?.focus();
+      }
+      return;
+    }
+    if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const rows = Array.from(panelRef.current?.querySelectorAll<HTMLButtonElement>("button[data-branch-row]") ?? []);
+    if (!rows.length) return;
+    const current = rows.indexOf(document.activeElement as HTMLButtonElement);
+    const next = event.key === "Home" ? 0 : event.key === "End" ? rows.length - 1
+      : current < 0 ? (event.key === "ArrowDown" ? 0 : rows.length - 1)
+      : (current + (event.key === "ArrowDown" ? 1 : -1) + rows.length) % rows.length;
+    rows[next].focus({ preventScroll: true });
+    rows[next].scrollIntoView({ block: "nearest" });
+  };
 
   const activePathIds = useMemo(
     () => buildActivePath(tree, activeLeafId),
@@ -351,7 +400,7 @@ export function BranchNavigator({ tree, activeLeafId, onLeafChange, inline, cont
            {!compact && <span>{t("i18n.branches")}</span>}
         </button>
         {open && dropdownPos && (
-          <div style={{
+          <div ref={panelRef} tabIndex={-1} role="group" aria-label={t("i18n.branches")} onKeyDown={handlePanelKeyDown} style={{
             position: "fixed",
             top: dropdownPos.top,
             left: dropdownPos.left,
@@ -390,6 +439,7 @@ export function BranchNavigator({ tree, activeLeafId, onLeafChange, inline, cont
     <div style={{ borderBottom: "1px solid var(--border)", background: "var(--bg)", flexShrink: 0, position: "relative" }}>
       {/* Header toggle */}
       <button
+        ref={btnRef}
         onClick={() => setOpenInternal((v) => !v)}
         style={{
           display: "flex",
@@ -412,7 +462,7 @@ export function BranchNavigator({ tree, activeLeafId, onLeafChange, inline, cont
 
       {/* Tree panel - overlay */}
       {open && (
-        <div style={{
+        <div ref={panelRef} tabIndex={-1} role="group" aria-label={t("i18n.branches")} onKeyDown={handlePanelKeyDown} style={{
           position: "absolute",
           top: "100%",
           left: 0,

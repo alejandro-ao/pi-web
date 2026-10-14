@@ -58,6 +58,7 @@ function hook({ commands = [], pending = null, getCommands = async () => ({ comm
   const scope = {
     onNewSession: undefined,
     onResumeSession: undefined,
+    onOpenBranches: undefined,
     sessionIdRef: { current: "session-1" },
     ensureNewSession: async () => "session-1",
     addNotice: (notice) => calls.notices.push(notice),
@@ -78,6 +79,23 @@ function hook({ commands = [], pending = null, getCommands = async () => ({ comm
   for (const name of CALLBACKS) scope[name] = compiled[name](scope);
   return { run: scope.handleBuiltinSlashCommand, scope, calls };
 }
+
+test("/tree opens branches without starting or prompting a session", async () => {
+  const { run, scope, calls } = hook();
+  let opened = 0;
+  scope.onOpenBranches = () => { opened++; };
+  scope.sessionIdRef.current = null;
+  scope.ensureNewSession = () => { assert.fail("must not start a session"); };
+  assert.deepEqual(await run("/tree"), { handled: true, action: "openBranches" });
+  assert.deepEqual(await run("/tree"), { handled: true, action: "openBranches" });
+  assert.equal(opened, 2);
+  assert.deepEqual(calls.requests, []);
+  assert.deepEqual(calls.notices, []);
+  assert.deepEqual(await run("/tree extra"), { handled: true, error: "Usage: /tree" });
+  assert.equal(opened, 2);
+  scope.onOpenBranches = undefined;
+  assert.deepEqual(await run("/tree"), { handled: false });
+});
 
 test("/resume opens session search without starting or prompting a session", async () => {
   const { run, scope, calls } = hook();

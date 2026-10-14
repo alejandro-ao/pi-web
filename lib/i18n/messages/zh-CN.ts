@@ -591,6 +591,7 @@ export const zhCNLocale: LocalePlugin = {
     "chat.prompts": "提示词",
     "chat.skills": "技能",
     "chat.dormant": "休眠",
+    "chat.commandTree": "打开当前会话的分支导航器",
     "chat.commandResume": "查找并继续已保存的会话",
     "chat.commandSettings": "打开设置",
     "chat.commandThinking": "选择推理级别，或直接设置",

@@ -163,7 +163,7 @@ export interface SlashCommandInfo {
 
 export type BuiltinSlashCommandResult =
   | { handled: false }
-  | { handled: true; message?: string; error?: string; action?: "openSessionStats" | "openSettings" | "openModelPicker" | "openThinkingPicker" | "openSessionSearch" };
+  | { handled: true; message?: string; error?: string; action?: "openSessionStats" | "openSettings" | "openModelPicker" | "openThinkingPicker" | "openSessionSearch" | "openBranches" };
 
 /** How a run ended, for the completion sound and notifications. */
 export interface AgentEndInfo {
@@ -195,6 +195,7 @@ export interface UseAgentSessionOptions {
   /** Opens Settings on a section; a bare `/mcp` the built-in MCP extension owns opens Settings › MCP. */
   onOpenSettings?: (section: SettingsSection) => void;
   onResumeSession?: () => void;
+  onOpenBranches?: () => void;
   setToolPreset?: (preset: ToolPreset) => void;
   deferInitialScroll?: boolean;
   /** A fresh composer's model and reasoning picks to start with: the composer it replaces had them. */
@@ -343,7 +344,7 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
   const {
     session, newSessionCwd, newSessionDraftKey, onAgentEnd, onToolEnd, onAttentionNeeded, onSessionCreated, onSessionForked,
     modelsRefreshKey, onBranchDataChange, onSystemPromptChange, onSystemToolsChange, onSystemInfoLoaderChange, onSessionStatsPanelOpen,
-    onOpenSettings, onResumeSession,
+    onOpenSettings, onResumeSession, onOpenBranches,
   } = opts;
 
   const isNew = session === null && newSessionCwd !== null;
@@ -2168,6 +2169,16 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
 
     const [, commandName, rawArgs = ""] = match;
     const args = rawArgs.trim();
+    if (commandName === "tree") {
+      if (args) {
+        const error = "Usage: /tree";
+        addNotice({ type: "error", message: error });
+        return { handled: true, error };
+      }
+      if (!onOpenBranches) return { handled: false };
+      onOpenBranches();
+      return { handled: true, action: "openBranches" };
+    }
     if (commandName === "resume") {
       if (args) {
         const error = "Usage: /resume";
@@ -2346,7 +2357,7 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
     } finally {
       if (commandName === "compact") setIsCompacting(false);
     }
-  }, [activeLeafId, addNotice, ensureNewSession, isCompacting, loadModels, loadSession, loadSlashCommands, loadTools, promoteNewSession, onOpenSettings, onSessionForked, onSessionStatsPanelOpen, onNewSession, modelList, handleModelChange, displayModel, modelThinkingLevels, handleThinkingLevelChange, session, newSessionCwd, onResumeSession, slashCommandsForMcp]);
+  }, [activeLeafId, addNotice, ensureNewSession, isCompacting, loadModels, loadSession, loadSlashCommands, loadTools, promoteNewSession, onOpenSettings, onSessionForked, onSessionStatsPanelOpen, onNewSession, modelList, handleModelChange, displayModel, modelThinkingLevels, handleThinkingLevelChange, session, newSessionCwd, onResumeSession, onOpenBranches, slashCommandsForMcp]);
 
   // Let AgentSession.prompt decide atomically whether to queue against the
   // current run or start a new turn if it settled while the request was in
